@@ -340,20 +340,21 @@ def scan(ctx, keywords, decade, years, source, max_results):
 @click.option("--years", help="Year range overriding decades, e.g. '1982-1995'.")
 @click.option("--source", type=click.Choice(["all", "archive", "youtube"]), default="all")
 @click.option("--max-results", "-n", default=20, help="Max results per keyword per source.")
-@click.option("--download-all", is_flag=True, help="Download everything found (not just catalog).")
+@click.option("--no-download", is_flag=True, help="Only catalog, skip downloading.")
 @click.option("--keywords-file", type=click.Path(exists=True),
               help="Load keywords from a text file (one per line).")
 @click.argument("keywords", required=False)
 @click.pass_context
-def batch(ctx, decades, years, source, max_results, download_all, keywords_file, keywords):
+def batch(ctx, decades, years, source, max_results, no_download, keywords_file, keywords):
     """Batch search across many keywords and/or years at once.
 
-    Searches every combination of keyword x decade/year range. Without any
-    keywords, uses built-in categories covering common 80s/90s commercial types.
+    Catalogs all results first, then automatically downloads them.
+    Without any keywords, uses built-in categories covering common
+    80s/90s commercial types.
 
     \b
     Examples:
-        # Search built-in categories across 80s and 90s:
+        # Search built-in categories across 80s and 90s (catalog + download):
         vintage-commercials batch
 
         # Custom keywords across both decades:
@@ -365,8 +366,8 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
         # Load keywords from a file:
         vintage-commercials batch --keywords-file my_brands.txt
 
-        # Search and download everything:
-        vintage-commercials batch "mcdonalds, burger king" --download-all
+        # Only catalog, don't download:
+        vintage-commercials batch --decades 1980s --no-download
     """
     catalog = ctx.obj["catalog"]
 
@@ -415,7 +416,10 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
 
     grand_total = 0
     new_count = 0
-    download_count = 0
+    new_urls = []  # track URLs added this run for download phase
+
+    # --- Phase 1: Catalog ---
+    console.print("[bold]Phase 1:[/bold] Cataloging...\n")
 
     with Progress(
         SpinnerColumn("simpleDots"),
@@ -424,7 +428,7 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
         TextColumn("{task.completed}/{task.total}"),
         console=console,
     ) as progress:
-        task = progress.add_task("Batch scanning...", total=total_combinations)
+        task = progress.add_task("Scanning...", total=total_combinations)
 
         for term in terms:
             for decade, yf, yt in search_configs:
@@ -439,21 +443,51 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
                 for r in results:
                     if catalog_add_result(catalog, r) is not None:
                         new_count += 1
-
-                        if download_all:
-                            filepath = download(r["source_url"])
-                            if filepath:
-                                catalog.mark_downloaded(r["source_url"], filepath)
-                                download_count += 1
+                        new_urls.append(r["source_url"])
 
                 progress.advance(task)
 
-    console.print(f"\n[bold green]Batch complete![/bold green]")
+    console.print(f"\n[bold green]Catalog complete![/bold green]")
     console.print(f"  Searches run:    {total_combinations}")
     console.print(f"  Results found:   {grand_total}")
     console.print(f"  New cataloged:   {new_count}")
-    if download_all:
+
+    # --- Phase 2: Download ---
+    if no_download:
+        console.print(f"\n  [dim]Skipping downloads (--no-download flag)[/dim]")
+    elif new_urls:
+        console.print(f"\n[bold]Phase 2:[/bold] Downloading {len(new_urls)} new commercials...\n")
+        download_count = 0
+        fail_count = 0
+
+        with Progress(
+            SpinnerColumn("simpleDots"),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Downloading...", total=len(new_urls))
+
+            for url in new_urls:
+                progress.update(task, description=f"[cyan]{url[:60]}[/cyan]")
+                try:
+                    filepath = download(url)
+                    if filepath:
+                        catalog.mark_downloaded(url, filepath)
+                        download_count += 1
+                    else:
+                        fail_count += 1
+                except Exception:
+                    fail_count += 1
+                progress.advance(task)
+
+        console.print(f"\n[bold green]Downloads complete![/bold green]")
         console.print(f"  Downloaded:      {download_count}")
+        if fail_count:
+            console.print(f"  Failed:          {fail_count}")
+    else:
+        console.print(f"\n  [dim]No new items to download.[/dim]")
 
     # Show updated stats
     s = catalog.stats()
