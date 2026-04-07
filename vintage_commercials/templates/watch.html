@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.title }} — VintageTV{% endblock %}
+
+{% block content %}
+<div class="watch-layout">
+    <div class="watch-main">
+        <div class="player-container">
+            {% if video.file_path %}
+            <video id="video-player" controls autoplay>
+                <source src="{{ url_for('serve_video', video_id=video.id) }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            {% else %}
+            <div class="player-placeholder">
+                <div class="placeholder-content">
+                    <span class="placeholder-icon">&#128250;</span>
+                    <p>This commercial hasn't been downloaded yet.</p>
+                    <button class="btn btn-primary download-btn"
+                            data-source-url="{{ video.source_url }}"
+                            data-title="{{ video.title }}"
+                            data-video-id="{{ video.id }}">
+                        Download Now
+                    </button>
+                    <p class="source-link">
+                        Or <a href="{{ video.source_url }}" target="_blank" rel="noopener">watch on {{ video.source }}</a>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="watch-info">
+            <h1 class="watch-title">{{ video.title }}</h1>
+            <div class="watch-meta">
+                {% if video.year_estimate %}<span class="tag tag-lg">{{ video.year_estimate }}</span>{% endif %}
+                {% if video.decade %}<span class="tag tag-lg">{{ video.decade }}</span>{% endif %}
+                {% if video.brand %}<span class="tag tag-lg">{{ video.brand }}</span>{% endif %}
+                <span class="source-tag {{ video.source }}">{{ video.source }}</span>
+                {% if video.file_path %}
+                <span class="badge badge-downloaded">Downloaded</span>
+                {% else %}
+                <button class="btn btn-sm download-btn"
+                        data-source-url="{{ video.source_url }}"
+                        data-title="{{ video.title }}"
+                        data-video-id="{{ video.id }}">
+                    Download
+                </button>
+                {% endif %}
+            </div>
+            {% if video.description %}
+            <div class="watch-description">
+                <p>{{ video.description }}</p>
+            </div>
+            {% endif %}
+            <div class="watch-details">
+                <p><strong>Source:</strong> <a href="{{ video.source_url }}" target="_blank" rel="noopener">{{ video.source_url[:80] }}{% if video.source_url|length > 80 %}...{% endif %}</a></p>
+                {% if video.date_added %}<p><strong>Added:</strong> {{ video.date_added[:10] }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <aside class="watch-sidebar">
+        <h3>Related</h3>
+        <div class="related-list">
+            {% for rel in related %}
+            <a href="{{ url_for('watch', video_id=rel.id) }}" class="related-card">
+                <div class="related-thumb">
+                    {% if rel.thumbnail_url %}
+                    <img src="{{ rel.thumbnail_url }}" alt="{{ rel.title }}" loading="lazy">
+                    {% else %}
+                    <div class="thumb-placeholder thumb-sm"><span>&#128250;</span></div>
+                    {% endif %}
+                </div>
+                <div class="related-info">
+                    <h4>{{ rel.title[:60] }}</h4>
+                    <span class="related-meta">
+                        {{ rel.year_estimate or rel.decade or '?' }}
+                        &middot; {{ rel.source }}
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </aside>
+</div>
+{% endblock %}

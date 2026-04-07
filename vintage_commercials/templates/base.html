@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vintage TV Commercials{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="nav-logo">
+            <span class="logo-icon">&#9611;&#9612;</span>
+            <span class="logo-text">VintageTV</span>
+        </a>
+        <form class="nav-search" action="{{ url_for('search_page') }}" method="get">
+            <input type="text" name="q" placeholder="Search vintage commercials..."
+                   value="{{ request.args.get('q', '') }}" autocomplete="off">
+            <select name="decade" class="decade-filter">
+                <option value="">All Decades</option>
+                <option value="1970s" {{ 'selected' if request.args.get('decade') == '1970s' }}>1970s</option>
+                <option value="1980s" {{ 'selected' if request.args.get('decade') == '1980s' }}>1980s</option>
+                <option value="1990s" {{ 'selected' if request.args.get('decade') == '1990s' }}>1990s</option>
+            </select>
+            <button type="submit">Search</button>
+        </form>
+        <div class="nav-links">
+            <a href="{{ url_for('browse') }}">Browse</a>
+            <a href="{{ url_for('browse', decade='1980s') }}">80s</a>
+            <a href="{{ url_for('browse', decade='1990s') }}">90s</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>Vintage TV Commercials &mdash; A nostalgic archive of retro television advertising</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

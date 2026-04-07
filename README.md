@@ -89,6 +89,32 @@ vintage-commercials list -q "nike"
 vintage-commercials stats
 ```
 
+### Launch the web interface
+
+```bash
+# Start the web app (YouTube-like browsing experience)
+vintage-commercials web
+
+# Custom port
+vintage-commercials web -p 8080
+
+# Debug mode
+vintage-commercials web --debug
+```
+
+Then open http://localhost:5000 in your browser.
+
+## Web Interface
+
+The web app provides a YouTube-like experience for browsing your vintage commercial collection:
+
+- **Home page** — hero search, decade cards, recently added grid
+- **Search** — searches your local catalog first; if under 3 results, automatically searches the internet, downloads metadata, and adds new finds to your archive
+- **Browse** — filterable grid by decade with pagination
+- **Watch** — video player page with description, metadata, and related videos
+- **Download on demand** — click "Download" on any cataloged video to fetch it in the background; the page auto-refreshes when the download completes
+- **Responsive** — works on desktop, tablet, and mobile
+
 ## Keywords File Format
 
 For `--keywords-file`, create a text file with one search term per line:
@@ -118,9 +144,21 @@ Lines starting with `#` are ignored.
 
 ```
 vintage_commercials/
-├── cli.py              # Click-based CLI interface
+├── cli.py              # Click-based CLI commands
+├── webapp.py           # Flask web application
 ├── catalog.py          # SQLite catalog database
 ├── downloader.py       # Download engine (yt-dlp + direct HTTP)
+├── templates/          # Jinja2 HTML templates
+│   ├── base.html
+│   ├── index.html      # Home page
+│   ├── browse.html     # Browse/filter page
+│   ├── search.html     # Search results (local + auto-discover)
+│   ├── watch.html      # Video player page
+│   └── components/
+│       └── video_card.html
+├── static/
+│   ├── style.css       # Dark theme YouTube-like styling
+│   └── app.js          # Download handling & interactions
 └── sources/
     ├── archive_org.py  # Internet Archive search
     └── youtube.py      # YouTube search via yt-dlp

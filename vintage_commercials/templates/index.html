@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}VintageTV — Retro TV Commercials from the 80s & 90s{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1>Vintage TV Commercials</h1>
+        <p>Relive the golden age of television advertising. Browse thousands of retro commercials from the 1980s and 1990s.</p>
+        <form class="hero-search" action="{{ url_for('search_page') }}" method="get">
+            <input type="text" name="q" placeholder="Search for brands, products, or anything nostalgic..." autofocus>
+            <button type="submit">Search</button>
+        </form>
+        <div class="hero-tags">
+            <span>Popular:</span>
+            <a href="{{ url_for('search_page', q='coca cola') }}">Coca-Cola</a>
+            <a href="{{ url_for('search_page', q='mcdonalds') }}">McDonald's</a>
+            <a href="{{ url_for('search_page', q='nintendo') }}">Nintendo</a>
+            <a href="{{ url_for('search_page', q='nike') }}">Nike</a>
+            <a href="{{ url_for('search_page', q='cereal') }}">Cereal</a>
+            <a href="{{ url_for('search_page', q='toys') }}">Toys</a>
+        </div>
+    </div>
+</section>
+
+<section class="decade-cards">
+    <a href="{{ url_for('browse', decade='1980s') }}" class="decade-card decade-80s">
+        <div class="decade-overlay">
+            <h2>The 1980s</h2>
+            <p>{{ stats.by_decade.get('1980s', 0) }} commercials</p>
+        </div>
+    </a>
+    <a href="{{ url_for('browse', decade='1990s') }}" class="decade-card decade-90s">
+        <div class="decade-overlay">
+            <h2>The 1990s</h2>
+            <p>{{ stats.by_decade.get('1990s', 0) }} commercials</p>
+        </div>
+    </a>
+</section>
+
+{% if recent %}
+<section class="section">
+    <h2 class="section-title">Recently Added</h2>
+    <div class="video-grid">
+        {% for video in recent %}
+        {% include "components/video_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if stats.total_cataloged == 0 %}
+<section class="empty-state">
+    <div class="empty-icon">&#128250;</div>
+    <h2>Your archive is empty</h2>
+    <p>Search for something to get started! The system will automatically find and catalog commercials from Internet Archive and YouTube.</p>
+    <p>Try searching for <a href="{{ url_for('search_page', q='80s commercials') }}">80s commercials</a> or <a href="{{ url_for('search_page', q='90s TV ads') }}">90s TV ads</a>.</p>
+</section>
+{% endif %}
+
+<section class="stats-bar">
+    <div class="stat">
+        <span class="stat-num">{{ stats.total_cataloged }}</span>
+        <span class="stat-label">Cataloged</span>
+    </div>
+    <div class="stat">
+        <span class="stat-num">{{ stats.total_downloaded }}</span>
+        <span class="stat-label">Downloaded</span>
+    </div>
+    {% for decade, count in stats.by_decade.items() %}
+    <div class="stat">
+        <span class="stat-num">{{ count }}</span>
+        <span class="stat-label">{{ decade }}</span>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Search "{{ query }}" — VintageTV{% endblock %}
+
+{% block content %}
+<section class="section">
+    <h1 class="search-heading">Results for "{{ query }}"</h1>
+
+    {% if local_results %}
+    <h2 class="section-title">In Your Archive ({{ local_results|length }})</h2>
+    <div class="video-grid">
+        {% for video in local_results %}
+        {% include "components/video_card.html" %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if auto_discovered and external_results %}
+    <div class="discover-banner">
+        <span class="discover-icon">&#127758;</span>
+        <span>We searched the internet and found more results! They've been added to your archive.</span>
+    </div>
+
+    {% if not local_results %}
+    <h2 class="section-title">Discovered Online ({{ external_results|length }})</h2>
+    <div class="video-grid">
+        {% for video in external_results %}
+        {% include "components/video_card.html" %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if not local_results and not external_results %}
+    <div class="empty-state">
+        <div class="empty-icon">&#128270;</div>
+        <h2>No results found</h2>
+        <p>Try different search terms or browse by decade.</p>
+        <div class="empty-actions">
+            <a href="{{ url_for('search_page', q=query, discover='true') }}" class="btn btn-primary">Search the Internet</a>
+            <a href="{{ url_for('browse') }}" class="btn btn-secondary">Browse All</a>
+        </div>
+    </div>
+    {% elif local_results and not auto_discovered %}
+    <div class="discover-prompt">
+        <p>Not finding what you want?</p>
+        <a href="{{ url_for('search_page', q=query, decade=decade, discover='true') }}" class="btn btn-primary">Search the Internet for More</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -494,6 +494,23 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
                   f"({s['total_downloaded']} downloaded)[/dim]")
 
 
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind to.")
+@click.option("--port", "-p", default=5000, help="Port to run on.")
+@click.option("--debug", is_flag=True, help="Enable Flask debug mode.")
+def web(host, port, debug):
+    """Launch the web interface — a YouTube-like browser for your collection.
+
+    \b
+    Examples:
+        vintage-commercials web
+        vintage-commercials web -p 8080
+        vintage-commercials web --debug
+    """
+    from .webapp import run_web
+    run_web(host=host, port=port, debug=debug)
+
+
 def main():
     cli()
 

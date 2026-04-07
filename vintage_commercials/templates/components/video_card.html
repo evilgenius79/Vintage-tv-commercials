@@ -1,0 +1,26 @@
+<a href="{{ url_for('watch', video_id=video.id) }}" class="video-card">
+    <div class="video-thumb">
+        {% if video.thumbnail_url %}
+        <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}" loading="lazy">
+        {% else %}
+        <div class="thumb-placeholder">
+            <span>&#128250;</span>
+        </div>
+        {% endif %}
+        {% if video.file_path %}
+        <span class="badge badge-downloaded">Downloaded</span>
+        {% endif %}
+        {% if video.duration_seconds %}
+        <span class="duration">{{ (video.duration_seconds // 60)|int }}:{{ '%02d' % (video.duration_seconds % 60)|int }}</span>
+        {% endif %}
+    </div>
+    <div class="video-info">
+        <h3 class="video-title">{{ video.title[:80] }}</h3>
+        <div class="video-meta">
+            {% if video.decade %}<span class="tag">{{ video.decade }}</span>{% endif %}
+            {% if video.year_estimate %}<span class="tag">{{ video.year_estimate }}</span>{% endif %}
+            {% if video.brand %}<span class="tag">{{ video.brand }}</span>{% endif %}
+            <span class="source-tag {{ video.source }}">{{ video.source }}</span>
+        </div>
+    </div>
+</a>

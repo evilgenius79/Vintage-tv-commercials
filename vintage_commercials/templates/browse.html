@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Browse{% if decade %} {{ decade }}{% endif %} — VintageTV{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="browse-header">
+        <h1>
+            {% if query %}Search: "{{ query }}"{% elif decade %}{{ decade }} Commercials{% else %}Browse All{% endif %}
+        </h1>
+        <div class="filter-bar">
+            <a href="{{ url_for('browse') }}" class="filter-btn {{ 'active' if not decade }}">All</a>
+            <a href="{{ url_for('browse', decade='1970s', q=query) }}" class="filter-btn {{ 'active' if decade == '1970s' }}">1970s</a>
+            <a href="{{ url_for('browse', decade='1980s', q=query) }}" class="filter-btn {{ 'active' if decade == '1980s' }}">1980s</a>
+            <a href="{{ url_for('browse', decade='1990s', q=query) }}" class="filter-btn {{ 'active' if decade == '1990s' }}">1990s</a>
+        </div>
+    </div>
+
+    {% if results %}
+    <div class="video-grid">
+        {% for video in results %}
+        {% include "components/video_card.html" %}
+        {% endfor %}
+    </div>
+
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="{{ url_for('browse', decade=decade, q=query, page=page-1) }}" class="page-btn">&laquo; Previous</a>
+        {% endif %}
+        <span class="page-info">Page {{ page }}</span>
+        {% if has_next %}
+        <a href="{{ url_for('browse', decade=decade, q=query, page=page+1) }}" class="page-btn">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#128270;</div>
+        <h2>Nothing here yet</h2>
+        <p>Try <a href="{{ url_for('search_page', q=query or 'TV commercials', decade=decade) }}">searching</a> to discover and add commercials to your archive.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
