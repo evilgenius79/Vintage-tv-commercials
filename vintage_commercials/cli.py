@@ -499,15 +499,24 @@ def batch(ctx, decades, years, source, max_results, no_download, keywords_file, 
 @click.option("--host", default="0.0.0.0", help="Host to bind to.")
 @click.option("--port", "-p", default=5000, help="Port to run on.")
 @click.option("--debug", is_flag=True, help="Enable Flask debug mode.")
-def web(host, port, debug):
+@click.option("--no-browser", is_flag=True, help="Don't auto-open the browser.")
+def web(host, port, debug, no_browser):
     """Launch the web interface — a YouTube-like browser for your collection.
+
+    Automatically opens your browser to the site.
 
     \b
     Examples:
         vintage-commercials web
         vintage-commercials web -p 8080
-        vintage-commercials web --debug
+        vintage-commercials web --no-browser
     """
+    if not no_browser:
+        import threading
+        import webbrowser
+        url = f"http://{'localhost' if host == '0.0.0.0' else host}:{port}"
+        threading.Timer(1.0, webbrowser.open, args=(url,)).start()
+
     from .webapp import run_web
     run_web(host=host, port=port, debug=debug)
 
