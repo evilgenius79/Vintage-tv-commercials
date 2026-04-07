@@ -278,6 +278,19 @@ def _search_external(query: str, decade: str = None) -> list[dict]:
     for r in all_results:
         catalog_add_result(catalog, r)
 
+    # Auto-download all newly discovered videos in background
+    for r in all_results:
+        source_url = r["source_url"]
+        if _is_safe_download_url(source_url):
+            with _tasks_lock:
+                if source_url in _download_tasks:
+                    continue
+            _set_task(source_url, {"status": "downloading", "file_path": None})
+            thread = threading.Thread(
+                target=_bg_download, args=(source_url, r.get("title", "")), daemon=True
+            )
+            thread.start()
+
     return catalog.search(query=query, decade=decade, limit=50)
 
 
