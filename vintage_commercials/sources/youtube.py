@@ -78,7 +78,8 @@ def search(query: str, decade: Optional[str] = None,
 
         video_id = info.get("id", "")
         title = info.get("title", "Unknown")
-        year = _guess_year_from_text(title + " " + info.get("description", ""))
+        description = info.get("description") or ""
+        year = _guess_year_from_text(title + " " + description)
         decade_val = _year_to_decade(year)
 
         results.append({
@@ -86,7 +87,7 @@ def search(query: str, decade: Optional[str] = None,
             "source_url": f"https://www.youtube.com/watch?v={video_id}",
             "identifier": video_id,
             "title": title,
-            "description": _truncate(info.get("description", ""), 500),
+            "description": _truncate(description, 500),
             "year_estimate": year,
             "decade": decade_val,
             "brand": None,

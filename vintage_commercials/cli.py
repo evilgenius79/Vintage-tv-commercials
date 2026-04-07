@@ -418,7 +418,7 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
     download_count = 0
 
     with Progress(
-        SpinnerColumn(),
+        SpinnerColumn("simpleDots"),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TextColumn("{task.completed}/{task.total}"),
