@@ -25,8 +25,6 @@ app = Flask(
 # --- Config ---
 DB_PATH = os.environ.get("VINTAGE_DB", "catalog.db")
 DOWNLOAD_DIR = os.environ.get("VINTAGE_DOWNLOADS", DEFAULT_DOWNLOAD_DIR)
-MAX_DOWNLOAD_SIZE = 500 * 1024 * 1024  # 500 MB
-
 catalog = Catalog(DB_PATH)
 
 # Track background download tasks with bounded size
