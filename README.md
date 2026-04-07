@@ -23,8 +23,12 @@ cd Vintage-tv-commercials
 
 # Create a virtual environment (recommended)
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
+
+# Activate it:
+source venv/bin/activate        # Linux / Mac
+venv\Scripts\activate           # Windows (Command Prompt)
+venv\Scripts\Activate.ps1       # Windows (PowerShell)
+source venv/Scripts/activate    # Windows (Git Bash)
 
 # Install the package and all dependencies
 pip install -e .
