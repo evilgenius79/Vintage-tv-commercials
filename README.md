@@ -9,9 +9,28 @@ Search, download, and catalog vintage TV commercials from the 1980s and 1990s.
 
 ## Install
 
+### Prerequisites
+
+- Python 3.10+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (installed automatically as a dependency)
+
+### Setup
+
 ```bash
+# Clone the repo
+git clone https://github.com/evilgenius79/Vintage-tv-commercials.git
+cd Vintage-tv-commercials
+
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+
+# Install the package and all dependencies
 pip install -e .
 ```
+
+After installation, the `vintage-commercials` command will be available in your terminal.
 
 ## Usage
 
