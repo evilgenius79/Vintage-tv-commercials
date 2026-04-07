@@ -137,8 +137,21 @@ Lines starting with `#` are ignored.
 
 1. **Search** — Queries Internet Archive's API and YouTube via yt-dlp
 2. **Catalog** — Stores metadata (title, year, decade, brand, source) in a local SQLite database
-3. **Download** — Downloads video files to a local `downloads/` directory
-4. **Browse** — Rich terminal UI for browsing and filtering your collection
+3. **Download** — Downloads video files to a local `downloads/` directory (500MB size limit, SSRF-protected)
+4. **Browse (CLI)** — Rich terminal UI for browsing and filtering your collection
+5. **Browse (Web)** — Flask-based YouTube-like web interface with auto-discover
+
+## API Endpoints
+
+The web app exposes a JSON API:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/search?q=...&decade=...` | GET | Search the local catalog |
+| `/api/discover` | POST | Search external sources and add to catalog |
+| `/api/download` | POST | Start a background download |
+| `/api/download/status?source_url=...` | GET | Check download progress |
+| `/api/stats` | GET | Catalog statistics |
 
 ## Project Structure
 
@@ -148,6 +161,7 @@ vintage_commercials/
 ├── webapp.py           # Flask web application
 ├── catalog.py          # SQLite catalog database
 ├── downloader.py       # Download engine (yt-dlp + direct HTTP)
+├── utils.py            # Shared helpers (truncate, year_to_decade, etc.)
 ├── templates/          # Jinja2 HTML templates
 │   ├── base.html
 │   ├── index.html      # Home page
