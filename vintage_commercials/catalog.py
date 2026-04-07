@@ -2,7 +2,6 @@
 
 import sqlite3
 import json
-from pathlib import Path
 from datetime import datetime
 
 
@@ -117,6 +116,15 @@ class Catalog:
                 "by_decade": {row[0]: row[1] for row in by_decade},
                 "by_source": {row[0]: row[1] for row in by_source},
             }
+
+    def get_by_id(self, video_id: int) -> dict | None:
+        """Get a single commercial by its ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM commercials WHERE id = ?", (video_id,)
+            ).fetchone()
+            return dict(row) if row else None
 
     def exists(self, source_url: str) -> bool:
         """Check if a URL is already in the catalog."""

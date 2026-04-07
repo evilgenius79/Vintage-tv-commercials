@@ -11,6 +11,7 @@ from .sources import archive_org
 
 
 DEFAULT_DOWNLOAD_DIR = "downloads"
+MAX_DOWNLOAD_SIZE = 500 * 1024 * 1024  # 500 MB
 
 
 def download(source_url: str, output_dir: str = DEFAULT_DOWNLOAD_DIR,
@@ -39,7 +40,7 @@ def _download_ytdlp(url: str, output_dir: str, filename: str = None) -> Optional
         print("[downloader] yt-dlp not found. Install with: pip install yt-dlp")
         return None
 
-    output_template = os.path.join(output_dir, f"{filename}.%(ext)s" if filename else "%(title)s.%(ext)s")
+    output_template = os.path.join(output_dir, f"{_sanitize(filename)}.%(ext)s" if filename else "%(title)s.%(ext)s")
 
     cmd = [
         "yt-dlp",
@@ -112,12 +113,20 @@ def _download_file(url: str, output_dir: str, filename: str = None) -> Optional[
     filepath = os.path.join(output_dir, _sanitize(filename))
 
     total = int(resp.headers.get("content-length", 0))
+    if total > MAX_DOWNLOAD_SIZE:
+        print(f"[downloader] File too large: {total // (1024*1024)}MB (limit {MAX_DOWNLOAD_SIZE // (1024*1024)}MB)")
+        return None
     downloaded = 0
 
     with open(filepath, "wb") as f:
         for chunk in resp.iter_content(chunk_size=8192):
-            f.write(chunk)
             downloaded += len(chunk)
+            if downloaded > MAX_DOWNLOAD_SIZE:
+                print(f"\n[downloader] Download exceeded size limit, aborting")
+                f.close()
+                os.remove(filepath)
+                return None
+            f.write(chunk)
             if total > 0:
                 pct = (downloaded / total) * 100
                 print(f"\r  Downloading: {pct:.0f}% ({downloaded // 1024}KB / {total // 1024}KB)", end="", flush=True)

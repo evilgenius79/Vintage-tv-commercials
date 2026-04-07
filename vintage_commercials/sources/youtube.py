@@ -9,6 +9,12 @@ import subprocess
 import shutil
 from typing import Optional
 
+from ..utils import (
+    truncate as _truncate,
+    year_to_decade as _year_to_decade,
+    guess_year_from_text as _guess_year_from_text,
+)
+
 
 def search(query: str, decade: Optional[str] = None,
            year_from: Optional[int] = None, year_to: Optional[int] = None,
@@ -93,27 +99,3 @@ def search(query: str, decade: Optional[str] = None,
     return results
 
 
-def _guess_year_from_text(text: str) -> str | None:
-    """Try to extract a year (1970-1999) from text like titles/descriptions."""
-    import re
-    matches = re.findall(r'\b(19[789]\d)\b', text)
-    if matches:
-        return matches[0]
-    return None
-
-
-def _year_to_decade(year: str | None) -> str | None:
-    if not year:
-        return None
-    try:
-        y = int(year)
-        return f"{(y // 10) * 10}s"
-    except ValueError:
-        return None
-
-
-def _truncate(text: str, max_len: int) -> str:
-    if not text:
-        return ""
-    text = text.replace("\n", " ").strip()
-    return text[:max_len] + "..." if len(text) > max_len else text

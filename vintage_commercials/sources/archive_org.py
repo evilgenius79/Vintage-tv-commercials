@@ -8,6 +8,8 @@ search API to find and retrieve commercial metadata.
 import requests
 from typing import Optional
 
+from ..utils import truncate as _truncate, year_to_decade as _year_to_decade
+
 
 ARCHIVE_SEARCH_URL = "https://archive.org/advancedsearch.php"
 ARCHIVE_METADATA_URL = "https://archive.org/metadata"
@@ -148,18 +150,3 @@ def _extract_year(date_str: str) -> str | None:
     return date_str[:4] if len(date_str) >= 4 and date_str[:4].isdigit() else None
 
 
-def _year_to_decade(year: str | None) -> str | None:
-    if not year:
-        return None
-    try:
-        y = int(year)
-        return f"{(y // 10) * 10}s"
-    except ValueError:
-        return None
-
-
-def _truncate(text: str, max_len: int) -> str:
-    if not text:
-        return ""
-    text = text.replace("\n", " ").strip()
-    return text[:max_len] + "..." if len(text) > max_len else text

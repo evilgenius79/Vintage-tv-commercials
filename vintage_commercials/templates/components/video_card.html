@@ -1,6 +1,6 @@
 <a href="{{ url_for('watch', video_id=video.id) }}" class="video-card">
     <div class="video-thumb">
-        {% if video.thumbnail_url %}
+        {% if video.thumbnail_url and video.thumbnail_url.startswith(('http://', 'https://')) %}
         <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}" loading="lazy">
         {% else %}
         <div class="thumb-placeholder">

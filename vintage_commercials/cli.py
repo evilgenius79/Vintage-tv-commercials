@@ -1,6 +1,5 @@
 """Command-line interface for the Vintage TV Commercial Downloader."""
 
-import time
 import click
 from rich.console import Console
 from rich.table import Table
@@ -10,6 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from .catalog import Catalog
 from .sources import archive_org, youtube
 from .downloader import download
+from .utils import catalog_add_result
 
 console = Console()
 
@@ -178,18 +178,7 @@ def search(ctx, keywords, decade, years, source, max_results):
         result = all_results[idx]
         console.print(f"\n[bold]Downloading:[/bold] {result['title']}")
 
-        # Add to catalog first
-        catalog.add(
-            title=result["title"],
-            source=result["source"],
-            source_url=result["source_url"],
-            year_estimate=result.get("year_estimate"),
-            decade=result.get("decade"),
-            description=result.get("description"),
-            duration_seconds=result.get("duration_seconds"),
-            thumbnail_url=result.get("thumbnail_url"),
-            metadata=result,
-        )
+        catalog_add_result(catalog, result)
 
         # Download
         filepath = download(result["source_url"])
@@ -333,18 +322,7 @@ def scan(ctx, keywords, decade, years, source, max_results):
         total_found += len(results)
 
         for r in results:
-            if not catalog.exists(r["source_url"]):
-                catalog.add(
-                    title=r["title"],
-                    source=r["source"],
-                    source_url=r["source_url"],
-                    year_estimate=r.get("year_estimate"),
-                    decade=r.get("decade"),
-                    description=r.get("description"),
-                    duration_seconds=r.get("duration_seconds"),
-                    thumbnail_url=r.get("thumbnail_url"),
-                    metadata=r,
-                )
+            if catalog_add_result(catalog, r) is not None:
                 new_count += 1
 
         console.print(f"  Found {len(results)} results")
@@ -459,18 +437,7 @@ def batch(ctx, decades, years, source, max_results, download_all, keywords_file,
                 grand_total += len(results)
 
                 for r in results:
-                    if not catalog.exists(r["source_url"]):
-                        catalog.add(
-                            title=r["title"],
-                            source=r["source"],
-                            source_url=r["source_url"],
-                            year_estimate=r.get("year_estimate"),
-                            decade=r.get("decade"),
-                            description=r.get("description"),
-                            duration_seconds=r.get("duration_seconds"),
-                            thumbnail_url=r.get("thumbnail_url"),
-                            metadata=r,
-                        )
+                    if catalog_add_result(catalog, r) is not None:
                         new_count += 1
 
                         if download_all:

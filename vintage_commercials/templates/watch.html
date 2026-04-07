@@ -66,7 +66,7 @@
             {% for rel in related %}
             <a href="{{ url_for('watch', video_id=rel.id) }}" class="related-card">
                 <div class="related-thumb">
-                    {% if rel.thumbnail_url %}
+                    {% if rel.thumbnail_url and rel.thumbnail_url.startswith(('http://', 'https://')) %}
                     <img src="{{ rel.thumbnail_url }}" alt="{{ rel.title }}" loading="lazy">
                     {% else %}
                     <div class="thumb-placeholder thumb-sm"><span>&#128250;</span></div>
