@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from .sources import archive_org
+from .ytdlp_utils import get_js_runtime_args
 
 
 DEFAULT_DOWNLOAD_DIR = "downloads"
@@ -43,6 +44,7 @@ def _download_ytdlp(url: str, output_dir: str, filename: str = None) -> Optional
 
     cmd = [
         "yt-dlp",
+        *get_js_runtime_args(),
         "--no-playlist",
         "-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best",
         "--merge-output-format", "mp4",

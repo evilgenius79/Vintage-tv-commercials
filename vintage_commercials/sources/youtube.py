@@ -14,6 +14,7 @@ from ..utils import (
     year_to_decade as _year_to_decade,
     guess_year_from_text as _guess_year_from_text,
 )
+from ..ytdlp_utils import get_js_runtime_args
 
 
 def search(query: str, decade: Optional[str] = None,
@@ -50,6 +51,7 @@ def search(query: str, decade: Optional[str] = None,
 
     cmd = [
         "yt-dlp",
+        *get_js_runtime_args(),
         "--dump-json",
         "--flat-playlist",
         "--no-download",
