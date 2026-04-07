@@ -14,12 +14,16 @@ ARCHIVE_METADATA_URL = "https://archive.org/metadata"
 ARCHIVE_DOWNLOAD_URL = "https://archive.org/download"
 
 
-def search(query: str, decade: Optional[str] = None, max_results: int = 25) -> list[dict]:
+def search(query: str, decade: Optional[str] = None,
+           year_from: Optional[int] = None, year_to: Optional[int] = None,
+           max_results: int = 25) -> list[dict]:
     """Search Internet Archive for vintage TV commercials.
 
     Args:
         query: Search terms (e.g., "coca cola commercial", "80s cereal ad").
         decade: Filter by decade ("1980s" or "1990s").
+        year_from: Start year for a custom year range (e.g., 1985).
+        year_to: End year for a custom year range (e.g., 1992).
         max_results: Maximum results to return.
 
     Returns:
@@ -31,8 +35,12 @@ def search(query: str, decade: Optional[str] = None, max_results: int = 25) -> l
     # Media type filter — video
     q_parts.append("mediatype:movies")
 
-    # Decade/year range filter
-    if decade == "1980s":
+    # Year range takes priority over decade
+    if year_from or year_to:
+        start = year_from or 1970
+        end = year_to or 1999
+        q_parts.append(f"date:[{start}-01-01 TO {end}-12-31]")
+    elif decade == "1980s":
         q_parts.append("date:[1980-01-01 TO 1989-12-31]")
     elif decade == "1990s":
         q_parts.append("date:[1990-01-01 TO 1999-12-31]")

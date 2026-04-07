@@ -10,12 +10,16 @@ import shutil
 from typing import Optional
 
 
-def search(query: str, decade: Optional[str] = None, max_results: int = 15) -> list[dict]:
+def search(query: str, decade: Optional[str] = None,
+           year_from: Optional[int] = None, year_to: Optional[int] = None,
+           max_results: int = 15) -> list[dict]:
     """Search YouTube for vintage TV commercials using yt-dlp.
 
     Args:
         query: Search terms (e.g., "pepsi commercial 1985").
         decade: Optional decade filter ("1980s" or "1990s") — appended to query.
+        year_from: Start year for a custom range (appended to query).
+        year_to: End year for a custom range.
         max_results: Maximum number of results.
 
     Returns:
@@ -27,7 +31,13 @@ def search(query: str, decade: Optional[str] = None, max_results: int = 15) -> l
 
     # Build search query
     search_query = f"{query} vintage TV commercial"
-    if decade:
+    if year_from and year_to and year_from == year_to:
+        search_query += f" {year_from}"
+    elif year_from and year_to:
+        search_query += f" {year_from}-{year_to}"
+    elif year_from:
+        search_query += f" {year_from}"
+    elif decade:
         search_query += f" {decade}"
 
     search_url = f"ytsearch{max_results}:{search_query}"

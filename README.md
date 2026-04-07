@@ -16,24 +16,67 @@ pip install -e .
 ## Usage
 
 ### Search and download interactively
+
+All search commands support **multiple keywords** (comma-separated) and **year ranges**.
+
 ```bash
-vintage-commercials search "coca cola" --decade 1980s
-vintage-commercials search "cereal commercial" --decade 1990s --source archive
+# Single keyword
+vintage-commercials search "coca cola"
+
+# Multiple keywords at once
+vintage-commercials search "coca cola, pepsi, dr pepper"
+
+# Filter by decade
+vintage-commercials search "cereal" --decade 1980s
+
+# Filter by specific year range
+vintage-commercials search "nike, reebok" --years 1987-1993
+
+# Single year
+vintage-commercials search "super bowl" --years 1986
 ```
 
 ### Scan and catalog without downloading
+
 ```bash
-vintage-commercials scan "fast food" --decade 1980s
-vintage-commercials scan "toy commercial" --decade 1990s
+vintage-commercials scan "fast food, soda, candy" --decade 1980s
+vintage-commercials scan "toy" --years 1985-1992
+vintage-commercials scan "car, truck" --years 1980-1999
+```
+
+### Batch search (the big one)
+
+Search across many keywords and decades automatically. Without keywords it uses built-in categories (cereal, fast food, soda, toys, cars, beer, sneakers, candy, video games, etc.).
+
+```bash
+# Use built-in categories across 80s and 90s
+vintage-commercials batch
+
+# Custom keywords across both decades
+vintage-commercials batch "coca cola, pepsi, sprite, 7up"
+
+# Narrow to specific years
+vintage-commercials batch "nike, reebok" --years 1987-1993
+
+# Only search the 80s
+vintage-commercials batch --decades 1980s
+
+# Load keyword list from a file (one per line)
+vintage-commercials batch --keywords-file my_brands.txt
+
+# Search AND download everything found
+vintage-commercials batch "mcdonalds, burger king" --download-all
 ```
 
 ### Download a specific URL
+
 ```bash
 vintage-commercials grab "https://archive.org/details/some-commercial" --brand "Pepsi" --decade 1980s
 vintage-commercials grab "https://www.youtube.com/watch?v=abc123"
 ```
 
 ### Browse your catalog
+
 ```bash
 vintage-commercials list
 vintage-commercials list --decade 1980s --downloaded
@@ -41,9 +84,28 @@ vintage-commercials list -q "nike"
 ```
 
 ### View stats
+
 ```bash
 vintage-commercials stats
 ```
+
+## Keywords File Format
+
+For `--keywords-file`, create a text file with one search term per line:
+
+```
+# brands.txt
+coca cola
+pepsi
+mcdonalds
+burger king
+nike
+reebok
+nintendo
+sega
+```
+
+Lines starting with `#` are ignored.
 
 ## How It Works
 

@@ -1,16 +1,74 @@
 """Command-line interface for the Vintage TV Commercial Downloader."""
 
+import time
 import click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.prompt import Confirm
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 from .catalog import Catalog
 from .sources import archive_org, youtube
 from .downloader import download
 
 console = Console()
+
+
+def _parse_keywords(keywords: str) -> list[str]:
+    """Parse a comma-separated keyword string into a list of search terms.
+
+    Supports:
+        "coca cola, pepsi, dr pepper"
+        "cereal"
+        "nike, reebok, adidas"
+    """
+    return [k.strip() for k in keywords.split(",") if k.strip()]
+
+
+def _parse_years(years_str: str) -> tuple[int | None, int | None]:
+    """Parse a year or year range string.
+
+    Supports:
+        "1985"       -> (1985, 1985)
+        "1985-1992"  -> (1985, 1992)
+        "1980-1989"  -> (1980, 1989)
+    """
+    if not years_str:
+        return None, None
+
+    if "-" in years_str:
+        parts = years_str.split("-", 1)
+        try:
+            return int(parts[0].strip()), int(parts[1].strip())
+        except ValueError:
+            return None, None
+    else:
+        try:
+            y = int(years_str.strip())
+            return y, y
+        except ValueError:
+            return None, None
+
+
+def _do_search(query: str, source: str, decade: str = None,
+               year_from: int = None, year_to: int = None,
+               max_results: int = 15) -> list[dict]:
+    """Run a search across selected sources. Returns combined results."""
+    all_results = []
+
+    if source in ("all", "archive"):
+        results = archive_org.search(query, decade=decade,
+                                     year_from=year_from, year_to=year_to,
+                                     max_results=max_results)
+        all_results.extend(results)
+
+    if source in ("all", "youtube"):
+        results = youtube.search(query, decade=decade,
+                                 year_from=year_from, year_to=year_to,
+                                 max_results=max_results)
+        all_results.extend(results)
+
+    return all_results
 
 
 @click.group()
@@ -20,48 +78,64 @@ def cli(ctx, db):
     """Vintage TV Commercial Downloader
 
     Search, download, and catalog retro TV commercials from the 1980s and 1990s.
+
+    Most commands accept multiple keywords (comma-separated) and year ranges.
     """
     ctx.ensure_object(dict)
     ctx.obj["catalog"] = Catalog(db)
 
 
 @cli.command()
-@click.argument("query")
-@click.option("--decade", type=click.Choice(["1980s", "1990s", "1970s"]), help="Filter by decade.")
+@click.argument("keywords")
+@click.option("--decade", type=click.Choice(["1970s", "1980s", "1990s"]), help="Filter by decade.")
+@click.option("--years", help="Year or year range, e.g. '1985' or '1983-1991'.")
 @click.option("--source", type=click.Choice(["all", "archive", "youtube"]), default="all",
               help="Which source to search.")
-@click.option("--max-results", "-n", default=15, help="Max results per source.")
+@click.option("--max-results", "-n", default=15, help="Max results per source per keyword.")
 @click.pass_context
-def search(ctx, query, decade, source, max_results):
+def search(ctx, keywords, decade, years, source, max_results):
     """Search for vintage TV commercials.
 
+    KEYWORDS can be comma-separated for multiple searches:
+
+    \b
     Examples:
         vintage-commercials search "coca cola"
+        vintage-commercials search "coca cola, pepsi, dr pepper"
         vintage-commercials search "cereal" --decade 1980s
-        vintage-commercials search "nike" --source youtube
+        vintage-commercials search "nike" --years 1987-1993
+        vintage-commercials search "fast food, soda, candy" --years 1985-1989
     """
     catalog = ctx.obj["catalog"]
+    year_from, year_to = _parse_years(years)
+    terms = _parse_keywords(keywords)
     all_results = []
 
     with console.status("[bold green]Searching for vintage commercials..."):
-        if source in ("all", "archive"):
-            console.print("[dim]Searching Internet Archive...[/dim]")
-            results = archive_org.search(query, decade=decade, max_results=max_results)
+        for term in terms:
+            console.print(f"[dim]Searching for '{term}'...[/dim]")
+            results = _do_search(term, source, decade=decade,
+                                 year_from=year_from, year_to=year_to,
+                                 max_results=max_results)
             all_results.extend(results)
-            console.print(f"  Found {len(results)} results on archive.org")
-
-        if source in ("all", "youtube"):
-            console.print("[dim]Searching YouTube...[/dim]")
-            results = youtube.search(query, decade=decade, max_results=max_results)
-            all_results.extend(results)
-            console.print(f"  Found {len(results)} results on YouTube")
+            console.print(f"  Found {len(results)} results")
 
     if not all_results:
         console.print("[yellow]No results found. Try different search terms.[/yellow]")
         return
 
+    # Deduplicate by source_url
+    seen = set()
+    unique_results = []
+    for r in all_results:
+        if r["source_url"] not in seen:
+            seen.add(r["source_url"])
+            unique_results.append(r)
+    all_results = unique_results
+
     # Display results
-    table = Table(title=f"Search Results for '{query}'", show_lines=True)
+    label = ", ".join(terms)
+    table = Table(title=f"Search Results for '{label}'", show_lines=True)
     table.add_column("#", style="bold", width=4)
     table.add_column("Source", width=10)
     table.add_column("Title", max_width=50)
@@ -137,6 +211,7 @@ def search(ctx, query, decade, source, max_results):
 def grab(ctx, url, title, decade, brand):
     """Download a specific commercial by URL and add it to the catalog.
 
+    \b
     Examples:
         vintage-commercials grab "https://www.youtube.com/watch?v=abc123"
         vintage-commercials grab "https://archive.org/details/some-commercial" --brand "Pepsi" --decade 1980s
@@ -164,7 +239,7 @@ def grab(ctx, url, title, decade, brand):
 
 
 @cli.command("list")
-@click.option("--decade", type=click.Choice(["1980s", "1990s", "1970s"]))
+@click.option("--decade", type=click.Choice(["1970s", "1980s", "1990s"]))
 @click.option("--brand", help="Filter by brand name.")
 @click.option("--downloaded", is_flag=True, help="Only show downloaded items.")
 @click.option("--query", "-q", help="Search within catalog.")
@@ -225,52 +300,198 @@ def stats(ctx):
 
 
 @cli.command()
-@click.argument("query")
-@click.option("--decade", type=click.Choice(["1980s", "1990s", "1970s"]), default=None)
+@click.argument("keywords")
+@click.option("--decade", type=click.Choice(["1970s", "1980s", "1990s"]), default=None)
+@click.option("--years", help="Year or year range, e.g. '1985' or '1983-1991'.")
 @click.option("--source", type=click.Choice(["all", "archive", "youtube"]), default="all")
 @click.option("--max-results", "-n", default=25)
 @click.pass_context
-def scan(ctx, query, decade, source, max_results):
+def scan(ctx, keywords, decade, years, source, max_results):
     """Scan and catalog commercials WITHOUT downloading (catalog-only mode).
 
+    KEYWORDS can be comma-separated for multiple searches.
     Great for building up your catalog first, then selectively downloading later.
 
+    \b
     Examples:
         vintage-commercials scan "fast food" --decade 1980s
-        vintage-commercials scan "toy commercial" --decade 1990s --source archive
+        vintage-commercials scan "toy, cereal, candy" --decade 1990s
+        vintage-commercials scan "soda" --years 1985-1992
+        vintage-commercials scan "car, truck, van" --years 1980-1999
     """
     catalog = ctx.obj["catalog"]
-    all_results = []
-
-    with console.status("[bold green]Scanning for vintage commercials..."):
-        if source in ("all", "archive"):
-            results = archive_org.search(query, decade=decade, max_results=max_results)
-            all_results.extend(results)
-
-        if source in ("all", "youtube"):
-            results = youtube.search(query, decade=decade, max_results=max_results)
-            all_results.extend(results)
-
+    year_from, year_to = _parse_years(years)
+    terms = _parse_keywords(keywords)
+    total_found = 0
     new_count = 0
-    for r in all_results:
-        if not catalog.exists(r["source_url"]):
-            catalog.add(
-                title=r["title"],
-                source=r["source"],
-                source_url=r["source_url"],
-                year_estimate=r.get("year_estimate"),
-                decade=r.get("decade"),
-                description=r.get("description"),
-                duration_seconds=r.get("duration_seconds"),
-                thumbnail_url=r.get("thumbnail_url"),
-                metadata=r,
-            )
-            new_count += 1
+
+    for term in terms:
+        console.print(f"[dim]Scanning for '{term}'...[/dim]")
+        results = _do_search(term, source, decade=decade,
+                             year_from=year_from, year_to=year_to,
+                             max_results=max_results)
+        total_found += len(results)
+
+        for r in results:
+            if not catalog.exists(r["source_url"]):
+                catalog.add(
+                    title=r["title"],
+                    source=r["source"],
+                    source_url=r["source_url"],
+                    year_estimate=r.get("year_estimate"),
+                    decade=r.get("decade"),
+                    description=r.get("description"),
+                    duration_seconds=r.get("duration_seconds"),
+                    thumbnail_url=r.get("thumbnail_url"),
+                    metadata=r,
+                )
+                new_count += 1
+
+        console.print(f"  Found {len(results)} results")
 
     console.print(
-        f"[bold green]Scan complete:[/bold green] "
-        f"Found {len(all_results)} results, added {new_count} new entries to catalog."
+        f"\n[bold green]Scan complete:[/bold green] "
+        f"Searched {len(terms)} keyword(s), found {total_found} results, "
+        f"added {new_count} new entries to catalog."
     )
+
+
+@cli.command()
+@click.option("--decades", default="1980s,1990s",
+              help="Comma-separated decades to search, e.g. '1980s,1990s'.")
+@click.option("--years", help="Year range overriding decades, e.g. '1982-1995'.")
+@click.option("--source", type=click.Choice(["all", "archive", "youtube"]), default="all")
+@click.option("--max-results", "-n", default=20, help="Max results per keyword per source.")
+@click.option("--download-all", is_flag=True, help="Download everything found (not just catalog).")
+@click.option("--keywords-file", type=click.Path(exists=True),
+              help="Load keywords from a text file (one per line).")
+@click.argument("keywords", required=False)
+@click.pass_context
+def batch(ctx, decades, years, source, max_results, download_all, keywords_file, keywords):
+    """Batch search across many keywords and/or years at once.
+
+    Searches every combination of keyword x decade/year range. Without any
+    keywords, uses built-in categories covering common 80s/90s commercial types.
+
+    \b
+    Examples:
+        # Search built-in categories across 80s and 90s:
+        vintage-commercials batch
+
+        # Custom keywords across both decades:
+        vintage-commercials batch "coca cola, pepsi, sprite, 7up"
+
+        # Specific year range:
+        vintage-commercials batch "nike, reebok" --years 1987-1993
+
+        # Load keywords from a file:
+        vintage-commercials batch --keywords-file my_brands.txt
+
+        # Search and download everything:
+        vintage-commercials batch "mcdonalds, burger king" --download-all
+    """
+    catalog = ctx.obj["catalog"]
+
+    # Collect keywords from all inputs
+    terms = []
+    if keywords:
+        terms.extend(_parse_keywords(keywords))
+    if keywords_file:
+        with open(keywords_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    terms.append(line)
+
+    # Default keyword list if none provided — covers common 80s/90s commercial types
+    if not terms:
+        terms = [
+            "TV commercial",
+            "cereal commercial",
+            "fast food commercial",
+            "soda commercial",
+            "toy commercial",
+            "car commercial",
+            "beer commercial",
+            "sneakers commercial",
+            "candy commercial",
+            "video game commercial",
+            "Saturday morning cartoon commercial",
+            "Super Bowl commercial",
+        ]
+        console.print(f"[dim]Using {len(terms)} built-in search categories[/dim]")
+
+    # Determine year ranges to iterate over
+    year_from, year_to = _parse_years(years)
+    if year_from and year_to:
+        search_configs = [(None, year_from, year_to)]
+        label = f"{year_from}-{year_to}"
+    else:
+        decade_list = [d.strip() for d in decades.split(",")]
+        search_configs = [(d, None, None) for d in decade_list]
+        label = ", ".join(decade_list)
+
+    total_combinations = len(terms) * len(search_configs)
+    console.print(f"\n[bold]Batch scan:[/bold] {len(terms)} keywords x {label}")
+    console.print(f"[bold]Total searches:[/bold] {total_combinations}\n")
+
+    grand_total = 0
+    new_count = 0
+    download_count = 0
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Batch scanning...", total=total_combinations)
+
+        for term in terms:
+            for decade, yf, yt in search_configs:
+                decade_label = decade or f"{yf}-{yt}"
+                progress.update(task, description=f"[cyan]{term}[/cyan] ({decade_label})")
+
+                results = _do_search(term, source, decade=decade,
+                                     year_from=yf, year_to=yt,
+                                     max_results=max_results)
+                grand_total += len(results)
+
+                for r in results:
+                    if not catalog.exists(r["source_url"]):
+                        catalog.add(
+                            title=r["title"],
+                            source=r["source"],
+                            source_url=r["source_url"],
+                            year_estimate=r.get("year_estimate"),
+                            decade=r.get("decade"),
+                            description=r.get("description"),
+                            duration_seconds=r.get("duration_seconds"),
+                            thumbnail_url=r.get("thumbnail_url"),
+                            metadata=r,
+                        )
+                        new_count += 1
+
+                        if download_all:
+                            filepath = download(r["source_url"])
+                            if filepath:
+                                catalog.mark_downloaded(r["source_url"], filepath)
+                                download_count += 1
+
+                progress.advance(task)
+
+    console.print(f"\n[bold green]Batch complete![/bold green]")
+    console.print(f"  Searches run:    {total_combinations}")
+    console.print(f"  Results found:   {grand_total}")
+    console.print(f"  New cataloged:   {new_count}")
+    if download_all:
+        console.print(f"  Downloaded:      {download_count}")
+
+    # Show updated stats
+    s = catalog.stats()
+    console.print(f"\n  [dim]Catalog total: {s['total_cataloged']} items "
+                  f"({s['total_downloaded']} downloaded)[/dim]")
 
 
 def main():
