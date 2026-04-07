@@ -521,6 +521,88 @@ def web(host, port, debug, no_browser):
     run_web(host=host, port=port, debug=debug)
 
 
+@cli.command()
+@click.argument("video_path", type=click.Path(exists=True))
+@click.option("--threshold", "-t", default=27.0, help="Scene detection sensitivity (lower = more splits).")
+@click.option("--min-length", default=5.0, help="Minimum clip duration in seconds.")
+@click.option("--max-length", default=120.0, help="Maximum clip duration in seconds.")
+@click.option("--output-dir", "-o", help="Output directory for clips.")
+@click.option("--model", help="Path to AI model (.hef for Hailo, .onnx for CPU).")
+@click.option("--no-hailo", is_flag=True, help="Disable Hailo hardware, use CPU only.")
+@click.pass_context
+def split(ctx, video_path, threshold, min_length, max_length, output_dir, model, no_hailo):
+    """Split a compilation video into individual commercials.
+
+    Detects scene boundaries, splits with FFmpeg, classifies with AI,
+    and catalogs each clip.
+
+    \b
+    Examples:
+        vintage-commercials split downloads/80s_commercials.mp4
+        vintage-commercials split compilation.mp4 --threshold 20
+        vintage-commercials split compilation.mp4 --model brand_classifier.hef
+    """
+    from .pipeline import CommercialPipeline
+
+    catalog = ctx.obj["catalog"]
+    pipeline = CommercialPipeline(
+        catalog=catalog,
+        clips_dir=output_dir or "clips",
+        model_path=model,
+        use_hailo=not no_hailo,
+    )
+
+    results = pipeline.process_video(
+        video_path,
+        detection_threshold=threshold,
+        min_scene_length=min_length,
+        max_scene_length=max_length,
+    )
+
+    console.print(f"\n[bold green]Split complete:[/bold green] "
+                  f"{len(results)} clips extracted and cataloged.")
+
+
+@cli.command()
+@click.option("--min-duration", default=60.0,
+              help="Minimum video duration (seconds) to consider as a compilation.")
+@click.option("--model", help="Path to AI model (.hef for Hailo, .onnx for CPU).")
+@click.option("--no-hailo", is_flag=True, help="Disable Hailo hardware, use CPU only.")
+@click.option("--clips-dir", default="clips", help="Output directory for clips.")
+@click.pass_context
+def process(ctx, min_duration, model, no_hailo, clips_dir):
+    """Auto-process all downloaded compilations.
+
+    Scans the downloads folder for videos longer than --min-duration,
+    splits them into individual commercials, classifies with AI,
+    and catalogs each clip. Already-processed videos are skipped.
+
+    \b
+    Examples:
+        vintage-commercials process
+        vintage-commercials process --min-duration 90
+        vintage-commercials process --model brand_classifier.hef
+    """
+    from .pipeline import CommercialPipeline
+
+    catalog = ctx.obj["catalog"]
+    pipeline = CommercialPipeline(
+        catalog=catalog,
+        clips_dir=clips_dir,
+        model_path=model,
+        use_hailo=not no_hailo,
+    )
+
+    results = pipeline.process_all_downloads(min_duration=min_duration)
+
+    console.print(f"\n[bold green]Processing complete:[/bold green] "
+                  f"{len(results)} total clips extracted.")
+
+    s = catalog.stats()
+    console.print(f"  [dim]Catalog total: {s['total_cataloged']} items "
+                  f"({s['total_downloaded']} downloaded)[/dim]")
+
+
 def main():
     cli()
 

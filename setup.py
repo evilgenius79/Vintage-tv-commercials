@@ -11,6 +11,13 @@ setup(
         "click>=8.1.0",
         "flask>=3.0.0",
     ],
+    extras_require={
+        "pi": [
+            "scenedetect[opencv]>=0.6",
+            "Pillow>=10.0",
+            "onnxruntime>=1.16",
+        ],
+    },
     include_package_data=True,
     package_data={
         "vintage_commercials": [

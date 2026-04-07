@@ -3,3 +3,8 @@ requests>=2.31.0
 rich>=13.0.0
 click>=8.1.0
 flask>=3.0.0
+
+# Pi 5 / AI pipeline (optional — install with: pip install -e ".[pi]")
+# scenedetect[opencv]>=0.6
+# Pillow>=10.0
+# onnxruntime>=1.16
