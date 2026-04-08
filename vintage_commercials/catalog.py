@@ -70,7 +70,8 @@ class Catalog:
             """, (file_path, datetime.now().isoformat(), source_url))
 
     def search(self, query: str = None, decade: str = None, brand: str = None,
-               downloaded_only: bool = False, limit: int = 50) -> list[dict]:
+               downloaded_only: bool = False, limit: int = 50,
+               offset: int = 0) -> list[dict]:
         """Search the catalog with optional filters."""
         conditions = []
         params = []
@@ -92,8 +93,8 @@ class Catalog:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                f"SELECT * FROM commercials {where} ORDER BY date_added DESC LIMIT ?",
-                params + [limit]
+                f"SELECT * FROM commercials {where} ORDER BY date_added DESC LIMIT ? OFFSET ?",
+                params + [limit, offset]
             ).fetchall()
             return [dict(row) for row in rows]
 

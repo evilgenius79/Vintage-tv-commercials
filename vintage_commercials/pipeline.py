@@ -129,7 +129,7 @@ class CommercialPipeline:
                 "brand": classification.get("brand"),
                 "description": (
                     f"Clip {i+1} extracted from '{parent_title or base_name}'. "
-                    f"Duration: {scene.get('duration', 0):.0f}s. "
+                    f"Duration: {scene.get('duration') or 0:.0f}s. "
                     f"AI detected: {', '.join(classification.get('tags', [])) or 'unknown'}."
                 ),
                 "duration_seconds": scene.get("duration"),
@@ -235,6 +235,7 @@ class CommercialPipeline:
 
         entry = {
             "title": title or Path(video_path).stem,
+            "source": "split",
             "source_url": source_url or video_path,
             "file_path": video_path,
             "brand": classification.get("brand"),
@@ -242,6 +243,17 @@ class CommercialPipeline:
             "classification": classification,
             "thumbnail_path": thumb_path,
         }
+
+        self.catalog.add(
+            title=entry["title"],
+            source=entry["source"],
+            source_url=entry["source_url"],
+            file_path=entry["file_path"],
+            decade=entry.get("decade_estimate"),
+            brand=entry.get("brand"),
+            tags=classification.get("tags"),
+            metadata={"classification": classification},
+        )
 
         self.classifier.cleanup_frames(video_path)
         return entry

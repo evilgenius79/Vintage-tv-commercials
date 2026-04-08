@@ -130,7 +130,7 @@ def _download_file(url: str, output_dir: str, filename: str = None) -> Optional[
 
 def _find_newest_file(directory: str) -> Optional[str]:
     """Find the most recently modified file in a directory."""
-    files = list(Path(directory).iterdir())
+    files = [f for f in Path(directory).iterdir() if f.is_file()]
     if not files:
         return None
     return str(max(files, key=lambda f: f.stat().st_mtime))
@@ -139,4 +139,5 @@ def _find_newest_file(directory: str) -> Optional[str]:
 def _sanitize(name: str) -> str:
     """Sanitize a filename."""
     keep = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_ ")
-    return "".join(c if c in keep else "_" for c in name).strip()
+    sanitized = "".join(c if c in keep else "_" for c in name).strip()
+    return sanitized or "untitled"

@@ -1,7 +1,6 @@
 """Flask web application — a YouTube-like interface for vintage TV commercials."""
 
 import os
-import time
 import threading
 from collections import OrderedDict
 from urllib.parse import urlparse
@@ -72,6 +71,7 @@ def browse():
         decade=decade,
         brand=brand,
         limit=per_page + 1,
+        offset=(page - 1) * per_page,
     )
 
     has_next = len(results) > per_page
@@ -141,7 +141,7 @@ def api_search():
 @app.route("/api/discover", methods=["POST"])
 def api_discover():
     """Search external sources for new commercials and add to catalog."""
-    data = request.get_json(force=True)
+    data = request.get_json(force=True, silent=True) or {}
     q = data.get("query", "").strip()
     decade = data.get("decade")
 
@@ -155,7 +155,7 @@ def api_discover():
 @app.route("/api/download", methods=["POST"])
 def api_download():
     """Start downloading a video in the background."""
-    data = request.get_json(force=True)
+    data = request.get_json(force=True, silent=True) or {}
     source_url = data.get("source_url")
     title = data.get("title", "")
 
@@ -186,7 +186,8 @@ def api_download_status():
 
     with _tasks_lock:
         task = _download_tasks.get(source_url, {"status": "unknown"})
-    return jsonify(task)
+    # Don't leak internal file paths to the client
+    return jsonify({"status": task.get("status", "unknown")})
 
 
 @app.route("/api/stats")
@@ -223,12 +224,21 @@ def serve_video(video_id):
         byte_start, byte_end = parsed
         length = byte_end - byte_start + 1
 
-        with open(file_path, "rb") as f:
-            f.seek(byte_start)
-            data = f.read(length)
+        def generate():
+            chunk_size = 64 * 1024  # 64KB chunks
+            with open(file_path, "rb") as f:
+                f.seek(byte_start)
+                remaining = length
+                while remaining > 0:
+                    read_size = min(chunk_size, remaining)
+                    data = f.read(read_size)
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
 
         return Response(
-            data,
+            generate(),
             status=206,
             mimetype="video/mp4",
             headers={
@@ -307,11 +317,17 @@ def _bg_download(source_url: str, title: str):
         _set_task(source_url, {"status": "failed", "file_path": None})
 
 
+CLIPS_DIR = os.environ.get("VINTAGE_CLIPS", "clips")
+
+
 def _is_safe_file_path(file_path: str) -> bool:
-    """Validate that a file path is within the downloads directory."""
+    """Validate that a file path is within allowed directories."""
     real_path = os.path.realpath(file_path)
-    base_path = os.path.realpath(DOWNLOAD_DIR)
-    return real_path.startswith(base_path + os.sep) or real_path == base_path
+    for allowed in (DOWNLOAD_DIR, CLIPS_DIR):
+        base = os.path.realpath(allowed)
+        if real_path.startswith(base + os.sep) or real_path == base:
+            return True
+    return False
 
 
 def _is_safe_download_url(url: str) -> bool:
@@ -355,8 +371,14 @@ def _parse_range(range_header: str, file_size: int) -> tuple[int, int] | None:
         if len(parts) != 2:
             return None
 
-        start = int(parts[0]) if parts[0] else 0
-        end = int(parts[1]) if parts[1] else file_size - 1
+        if not parts[0]:
+            # Suffix range: bytes=-500 means last 500 bytes
+            suffix_length = int(parts[1])
+            start = max(0, file_size - suffix_length)
+            end = file_size - 1
+        else:
+            start = int(parts[0])
+            end = int(parts[1]) if parts[1] else file_size - 1
 
         if start < 0 or end < 0 or start >= file_size or start > end:
             return None
